@@ -10,7 +10,7 @@
 
 - You can get help with `/map help`
 
-
+<img src=".github/cropharvesting.gif" alt="show" />
 
 ### ⚠️ Warning
 
