@@ -272,50 +272,51 @@ void RegCommand()
 		auto action = results["MapsEnum"].get<std::string>();
 		string str = "";
 		ServerPlayer* sp = origin.getPlayer();
-		if (sp) {
 			switch (do_hash(action.c_str()))
 			{
 			case do_hash("add"): {
-				auto picfile = results["MapSoftEnum"].get<std::string>();
-				if (!picfile.empty()) {
-					auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile);
-					if (data.size() == 0) return;
-					vector<mce::Color> Colorlist;
-					for (int y = 0; y < h; y++)
-					{
-						for (int x = 0; x < w; x++)
+				if (sp) {
+					auto picfile = results["MapSoftEnum"].get<std::string>();
+					if (!picfile.empty()) {
+						auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile);
+						if (data.size() == 0) return;
+						vector<mce::Color> Colorlist;
+						for (int y = 0; y < h; y++)
 						{
-							mce::Color img((float)data[(y * w + x) * 4 + 0] / 255, (float)data[(y * w + x) * 4 + 1] / 255, (float)data[(y * w + x) * 4 + 2] / 255, (float)data[(y * w + x) * 4 + 3] / 255);
-							Colorlist.push_back(img);
-						}
-					}
-					auto datalist = Helper::CuttingImages(Colorlist, w, h);
-					int xtemp = 0;
-					int ytemp = 0;
-					for (auto data : datalist) {
-						auto mapitem = ItemStack::create("minecraft:filled_map");
-						auto MapIndex = sp->getMapIndex();
-						sp->setMapIndex(MapIndex + 1);
-						MapItem::setMapNameIndex(*mapitem, MapIndex);
-						auto& mapdate = Global<Level>->_createMapSavedData(MapIndex);
-						mapdate.setLocked();
-						for (int x = 0; x < 128; x++)
-							for (int y = 0; y < 128; y++) {
-								mapdate.setPixel(data.rawColor[y + x * 128].toABGR(), y, x);
+							for (int x = 0; x < w; x++)
+							{
+								mce::Color img((float)data[(y * w + x) * 4 + 0] / 255, (float)data[(y * w + x) * 4 + 1] / 255, (float)data[(y * w + x) * 4 + 2] / 255, (float)data[(y * w + x) * 4 + 3] / 255);
+								Colorlist.push_back(img);
 							}
-						mapdate.save(*Global<LevelStorage>);
-						MapItem::setItemInstanceInfo(*mapitem, mapdate);
-						auto sizetest = sqrt(datalist.size());
-						mapitem->setCustomName(picfile + "-" + std::to_string(xtemp) + "_" + std::to_string(ytemp));
-						Level::spawnItem(sp->getPos(), sp->getDimensionId(), mapitem);
-						delete mapitem;
-						ytemp++;
-						if (ytemp == sizetest) {
-							xtemp++;
-							ytemp = 0;
 						}
+						auto datalist = Helper::CuttingImages(Colorlist, w, h);
+						int xtemp = 0;
+						int ytemp = 0;
+						for (auto data : datalist) {
+							auto mapitem = ItemStack::create("minecraft:filled_map");
+							auto MapIndex = sp->getMapIndex();
+							sp->setMapIndex(MapIndex + 1);
+							MapItem::setMapNameIndex(*mapitem, MapIndex);
+							auto& mapdate = Global<Level>->_createMapSavedData(MapIndex);
+							mapdate.setLocked();
+							for (int x = 0; x < 128; x++)
+								for (int y = 0; y < 128; y++) {
+									mapdate.setPixel(data.rawColor[y + x * 128].toABGR(), y, x);
+								}
+							mapdate.save(*Global<LevelStorage>);
+							MapItem::setItemInstanceInfo(*mapitem, mapdate);
+							auto sizetest = sqrt(datalist.size());
+							mapitem->setCustomName(picfile + "-" + std::to_string(xtemp) + "_" + std::to_string(ytemp));
+							Level::spawnItem(sp->getPos(), sp->getDimensionId(), mapitem);
+							delete mapitem;
+							ytemp++;
+							if (ytemp == sizetest) {
+								xtemp++;
+								ytemp = 0;
+							}
+						}
+						output.success("§l§6[CustomMapX] §aAdd Map Success!(" + std::to_string(datalist.size()) + ")");
 					}
-					output.success("§l§6[CustomMapX] §aAdd Map Success!(" + std::to_string(datalist.size()) + ")");
 				}
 				break;
 			}
@@ -337,10 +338,6 @@ void RegCommand()
 			default:
 				break;
 			}
-		}
-		else {
-			output.error("§l§6[CustomMapX] §cYou are not in the game!");
-		}
      });
 	DynamicCommand::setup(std::move(command));
 }
