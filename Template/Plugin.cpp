@@ -397,6 +397,7 @@ bool isNextImage2(string name, string newname) {
 bool UseItemSupply(Player* sp, ItemStackBase& item, string itemname, short aux) {
 	auto& plinv = sp->getSupplies();
 	auto slotnum = dAccess<int, 16>(&plinv);
+	auto& uid = sp->getUniqueID();
 	if (item.getCount() == 0) {
 		auto& inv = sp->getInventory();
 		bool isgive = 0;
@@ -404,7 +405,6 @@ bool UseItemSupply(Player* sp, ItemStackBase& item, string itemname, short aux) 
 			auto& item = inv.getItem(i);
 			if (!item.isNull()) {
 				if (item.getItem()->getSerializedName() == "minecraft:filled_map") {
-
 					if (i == slotnum) continue;
 					bool isgive = 0;
 					if (isNextImage1(itemname, item.getCustomName())) {
@@ -413,8 +413,7 @@ bool UseItemSupply(Player* sp, ItemStackBase& item, string itemname, short aux) 
 					if (isgive) {
 						auto snbt = const_cast<ItemStack*>(&item)->getNbt()->toSNBT();
 
-						auto& uid = sp->getUniqueID();
-
+			
 						Schedule::delay([snbt, uid, slotnum, i] {
 							auto newitem = ItemStack::create(CompoundTag::fromSNBT(snbt));
 							auto sp = Global<Level>->getPlayer(uid);
@@ -434,23 +433,25 @@ bool UseItemSupply(Player* sp, ItemStackBase& item, string itemname, short aux) 
 				}
 			}
 		}
-		if(!isgive){
-			for (int i = 0; i <= inv.getSize(); i++) {
-				auto& item = inv.getItem(i);
-				if (!item.isNull()) {
-					if (item.getItem()->getSerializedName() == "minecraft:filled_map") {
+		Schedule::delay([isgive, uid, slotnum, itemname] {
+			auto sp = Global<Level>->getPlayer(uid);
+			auto& inv = sp->getInventory();
+			if (!isgive) {
+				for (int i = 0; i <= inv.getSize(); i++) {
+					auto& item = inv.getItem(i);
+					if (!item.isNull()) {
+						if (item.getItem()->getSerializedName() == "minecraft:filled_map") {
 
-						if (i == slotnum) continue;
-						bool isgive2 = 0;
-						if (isNextImage2(itemname, item.getCustomName())) {
-							isgive2 = 1;
-						}
-						if (isgive2) {
-							auto snbt = const_cast<ItemStack*>(&item)->getNbt()->toSNBT();
+							if (i == slotnum) continue;
+							bool isgive2 = 0;
+							if (isNextImage2(itemname, item.getCustomName())) {
+								isgive2 = 1;
+							}
+							if (isgive2) {
+								auto snbt = const_cast<ItemStack*>(&item)->getNbt()->toSNBT();
 
-							auto& uid = sp->getUniqueID();
-
-							Schedule::delay([snbt, uid, slotnum, i] {
+								auto& uid = sp->getUniqueID();
+								Schedule::delay([snbt, uid, slotnum, i] {
 								auto newitem = ItemStack::create(CompoundTag::fromSNBT(snbt));
 								auto sp = Global<Level>->getPlayer(uid);
 								if (sp) {
@@ -464,12 +465,13 @@ bool UseItemSupply(Player* sp, ItemStackBase& item, string itemname, short aux) 
 								}
 								delete newitem;
 								}, 1);
-						}
+							}
 
+						}
 					}
 				}
 			}
-		}
+			},1);
 	}
 }
 
