@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+﻿#include <iostream>
+#include <Global.h>
 #include <EventAPI.h>
 #include <LoggerAPI.h>
 #include <MC/Level.hpp>
@@ -291,7 +292,6 @@ void RegCommand()
 				int xtemp = 0;
 				int ytemp = 0;
 				for (auto data : datalist) {
-					//auto img = Helper::createImage(i, 128, 128);
 					auto mapitem = ItemStack::create("minecraft:filled_map");
 					auto MapIndex = sp->getMapIndex();
 					sp->setMapIndex(MapIndex + 1);
@@ -314,14 +314,23 @@ void RegCommand()
 						ytemp = 0;
 					}
 				}
+				output.success("§l§6[CustomMapX] §aAdd Map Success!(" + std::to_string(datalist.size()) + ")");
 			}
-			output.success("Done!");
 			break;
 		}
 		case do_hash("reload"): {
 			vector<string> out;
 			getAllFiles(".\\plugins\\CustomMapX\\picture", out);
 			command.getInstance()->setSoftEnum("MapENameList", out);
+			break;
+		}
+		case do_hash("help"): {
+			output.success(
+			"§l§e>§6CustomMapX§e<\n"
+			"§b/map add §l§a<mapfile> §l§gAdd maps\n"
+			"§b/map reload §l§gRefresh picture path\n"
+			"§b/map help\n"
+			"§l§e>§6CustomMapX§e<");
 			break;
 		}
 		default:
@@ -334,6 +343,10 @@ void RegCommand()
 void PluginInit()
 {
 	logger.info("Loaded");
+	if (!std::filesystem::exists("plugins/CustomMapX"))
+		std::filesystem::create_directories("plugins/CustomMapX");
+	if (!std::filesystem::exists("plugins/CustomMapX/picture"))
+		std::filesystem::create_directories("plugins/CustomMapX/picture");
 	RegCommand();
 }
 
