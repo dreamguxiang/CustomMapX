@@ -27,6 +27,9 @@
     <ClInclude Include="resource.h">
       <Filter>Resourse</Filter>
     </ClInclude>
+    <ClInclude Include="lodepng.h">
+      <Filter>Header</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -37,6 +40,9 @@
     </ClCompile>
     <ClCompile Include="Plugin.cpp">
       <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="lodepng.cpp">
+      <Filter>Header</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
