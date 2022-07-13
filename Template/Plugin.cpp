@@ -11,6 +11,7 @@
 #include <MC/ItemStack.hpp>
 #include "Version.h"
 #include <LLAPI.h>
+#include <MC/Spawner.hpp>
 #include <ServerAPI.h>
 #include <DynamicCommandAPI.h>
 #include <ScheduleAPI.h>
@@ -307,7 +308,8 @@ void RegCommand()
 							MapItem::setItemInstanceInfo(*mapitem, mapdate);
 							auto sizetest = sqrt(datalist.size());
 							mapitem->setCustomName(picfile + "-" + std::to_string(xtemp) + "_" + std::to_string(ytemp));
-							Level::spawnItem(sp->getPos(), sp->getDimensionId(), mapitem);
+							Spawner* sps = &Global<Level>->getSpawner();
+							ItemActor* ac = sps->spawnItem(sp->getRegion(), *mapitem, nullptr, sp->getPos(), 0);	
 							delete mapitem;
 							ytemp++;
 							if (ytemp == sizetest) {
@@ -344,6 +346,7 @@ void RegCommand()
 
 void PluginInit()
 {
+
 	logger.info("Loaded");
 	if (!std::filesystem::exists("plugins/CustomMapX"))
 		std::filesystem::create_directories("plugins/CustomMapX");
