@@ -20,7 +20,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
             LL::Version(PLUGIN_VERSION_MAJOR, PLUGIN_VERSION_MINOR, PLUGIN_VERSION_REVISION, PLUGIN_LLVERSION_STATUS),
             std::map<std::string, std::string> {
 #ifdef PLUGIN_AUTHOR
-                { "Author", PLUGIN_AUTHOR },
+                { "QingYu", PLUGIN_AUTHOR },
 #endif // PLUGIN_AUTHOR
                     //{ "Key", "Value" }
             }
