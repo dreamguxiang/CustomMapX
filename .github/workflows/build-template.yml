@@ -76,6 +76,8 @@ jobs:
           mkdir output/
           mkdir output/${{env.PLUGIN_NAME}}/
           cp -f x64/Release/*.dll output/${{env.PLUGIN_NAME}}/
+          mkdir output/${{env.PLUGIN_NAME}}/lib/
+          cp -f Header/FreeImage/*.dll output/${{env.PLUGIN_NAME}}/lib/
           mkdir output/PDB/
           cp -f x64/Release/*.pdb output/PDB/
           # mkdir output/${{env.PLUGIN_NAME}}/${{env.PLUGIN_NAME}}/
