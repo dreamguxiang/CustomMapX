@@ -9,7 +9,7 @@ env:
   BUILD_CONFIGURATION: Release
   Platform: X64
   SDK_DIR: ./SDK
-  BDS_VERSION: 1.19.10.03
+  BDS_VERSION: 1.19.20.02
 
 jobs:
   build:

@@ -2,6 +2,8 @@
 // Microsoft Visual C++ 生成的包含文件。
 // 供 Resource.rc 使用
 //
+#define MAPModule                       4
+#define IDR_DLL1                        101
 
 // Next default values for new objects
 // 

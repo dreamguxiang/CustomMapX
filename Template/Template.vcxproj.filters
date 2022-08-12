@@ -24,7 +24,13 @@
     <ClInclude Include="resource.h">
       <Filter>Resourse</Filter>
     </ClInclude>
-    <ClInclude Include="lodepng.h">
+    <ClInclude Include="godef.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryModule.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="GoLang.hpp">
       <Filter>Header</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,7 +41,7 @@
     <ClCompile Include="Plugin.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="lodepng.cpp">
+    <ClCompile Include="MemoryModule.c">
       <Filter>Header</Filter>
     </ClCompile>
   </ItemGroup>

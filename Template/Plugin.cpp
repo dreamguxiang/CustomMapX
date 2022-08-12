@@ -10,6 +10,7 @@
 #include <MC/Player.hpp>
 #include <MC/ItemStack.hpp>
 #include "Version.h"
+#include <LoggerAPI.h>
 #include <LLAPI.h>
 #include <MC/Spawner.hpp>
 #include <ServerAPI.h>
@@ -176,46 +177,74 @@ public:
 		
 	}
 };
+extern HMODULE DllMainPtr;
+//#include"MemoryModule.h"
+#include "GoLang.hpp"
+void golang() {
+	/*HRSRC DLL = ::FindResource(DllMainPtr, MAKEINTRESOURCE(4), L"DLL");
+	unsigned int ResSize = ::SizeofResource(DllMainPtr, DLL);
+	HGLOBAL ResData = ::LoadResource(DllMainPtr, DLL);
+	void* ResDataRef = ::LockResource(ResData);
+	HMEMORYMODULE lib = MemoryLoadLibrary(ResDataRef, ResSize);*/
+	auto lib = LoadLibrary(L"MAP_Golang_Module.dll");
 
-#include "../Header/FreeImage/FreeImage.h"
-#include "lodepng.h"
-#include <Global.h>
+	if (lib) {
+		GolangFunc::png2PixelArr = (GolangFunc::FuncDef::png2PixelArr)GetProcAddress(lib, "png2PixelArr");
+		GolangFunc::getPngWidth = (GolangFunc::FuncDef::getPngWidth)GetProcAddress(lib, "getPngWidth");
+		GolangFunc::getPngHeight = (GolangFunc::FuncDef::getPngHeight)GetProcAddress(lib, "getPngHeight");
+	}
+	else {
+		Logger("CustomNpcModule").warn("Failed to load MAP_SubModule");
+	}
+}
 namespace Helper {
-	void jpg2png(const std::string& srcPath, const std::string& outPath) {
+	vector<char*> split(char* a1) {
+		vector<char*> result;
+		char* a2 = a1;
+		int a3 = 0;
+		while (*a2) {
+			if (a3 < 2) {
+				if (*a2 == '\n') {
+					*a2 = 0;
+					a3++;
+					result.push_back(a1);
+					a1 = a2 + 1;
+				}
+			}
+			a2++;
+		}
+		result.push_back(a1);
+		return result;
+	}
 
-		FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
-		FIBITMAP* dib(nullptr);
-		fif = FreeImage_GetFileType(srcPath.c_str(), 0);
-		if (fif == FIF_UNKNOWN)
-			fif = FreeImage_GetFIFFromFilename(srcPath.c_str());
-		if (fif == FIF_UNKNOWN)
-			return;
-		if (FreeImage_FIFSupportsReading(fif))
-			dib = FreeImage_Load(fif, srcPath.c_str());
-		if (!dib)
-			return;
-		FIBITMAP* dib32 = FreeImage_ConvertTo32Bits(dib);
-		FIBITMAP* dibResized = FreeImage_Rescale(dib32, FreeImage_GetWidth(dib), FreeImage_GetHeight(dib), FILTER_CATMULLROM);
-		FreeImage_Unload(dib);
-		FreeImage_Save(FIF_PNG, dibResized, outPath.c_str());
-		FreeImage_Unload(dibResized);
-		FreeImage_Unload(dib32);
-		FreeImage_DeInitialise();
+	const std::tuple<std::vector<unsigned char>, unsigned, unsigned>  Png2Pix(string path) {
+		GoString paths{ path.c_str(),(int64_t)path.size() };
+		auto imagedata = GolangFunc::png2PixelArr(paths);
+		auto data = imagedata.data();
+		auto out = split(data);
+		if (out.size() == 3) {
+			int w = atoi(out[0]);
+			int h = atoi(out[1]);
+			std::vector<unsigned char> image;
+			image.resize(w * h * 4);
+			memcpy(image.data(), (void*)out[2], w * h * 4);
+			return std::make_tuple(image, w, h);
+		}
+		return std::make_tuple(std::vector<unsigned char>(), 0, 0);
 	}
 	
-	std::tuple<std::vector<unsigned char>, unsigned, unsigned> Png2Pix(string path) {
-		std::vector<unsigned char> png, image;
-		unsigned w, h;
-		jpg2png(path, path);
-		unsigned error = lodepng::load_file(png,path);
-		if (!error) error = lodepng::decode(image, w, h, png);
+	//std::tuple<std::vector<unsigned char>, unsigned, unsigned> Png2Pix(string path) {
+	//	std::vector<unsigned char> png, image;
+	//	unsigned w, h;
+	//	unsigned error = lodepng::load_file(png,path);
+	//	if (!error) error = lodepng::decode(image, w, h, png);
 
-		if (error) {
-			logger.warn("Failed to load skin image(2): " + path);
-			return {};
-		}
-		return std::make_tuple(image, w, h);
-	}
+	//	if (error) {
+	//		logger.warn("Failed to load skin image(2): " + path);
+	//		return {};
+	//	}
+	//	return std::make_tuple(image, w, h);
+	//}
 	
 	vector<Image2D> CuttingImages(std::vector<mce::Color> image, int width, int height) {
 		vector<Image2D> images;
@@ -325,7 +354,7 @@ void RegCommand()
 			case do_hash("reload"): {
 				vector<string> out;
 				getAllFiles(".\\plugins\\CustomMapX\\picture", out);
-				command.getInstance()->setSoftEnum("MapENameList", out);
+				command.getInstance()->addSoftEnumValues("MapENameList",out);
 				break;
 			}
 			case do_hash("help"): {
@@ -346,7 +375,7 @@ void RegCommand()
 
 void PluginInit()
 {
-
+	golang();
 	logger.info("Loaded");
 	if (!std::filesystem::exists("plugins/CustomMapX"))
 		std::filesystem::create_directories("plugins/CustomMapX");

@@ -83,7 +83,9 @@ copy /Y "$(TargetPath)" "$(LocalDebuggerWorkingDirectory)\plugins\"
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
-    <ClInclude Include="lodepng.h" />
+    <ClInclude Include="godef.h" />
+    <ClInclude Include="GoLang.hpp" />
+    <ClInclude Include="MemoryModule.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Version.h" />
   </ItemGroup>
@@ -91,7 +93,7 @@ copy /Y "$(TargetPath)" "$(LocalDebuggerWorkingDirectory)\plugins\"
     <ClCompile Include="dllmain.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="lodepng.cpp">
+    <ClCompile Include="MemoryModule.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Plugin.cpp">

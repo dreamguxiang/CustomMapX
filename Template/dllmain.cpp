@@ -5,12 +5,14 @@
 #pragma comment(lib, "../SDK/Lib/bedrock_server_var.lib")
 #pragma comment(lib, "../SDK/Lib/SymDBHelper.lib")
 #pragma comment(lib, "../SDK/Lib/LiteLoader.lib")
-#pragma comment(lib, "../Header/FreeImage/FreeImage.lib")
+
+HMODULE DllMainPtr;
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
                      )
 {
+    DllMainPtr = hModule;
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
