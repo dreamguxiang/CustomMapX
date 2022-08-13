@@ -6,11 +6,11 @@
 #define JsonFile "plugins/CustomMapX/config.json"
 // Plugin Information, used in dllmain.cpp for register plugin
 #define PLUGIN_NAME                 "CustomMapX"
-#define PLUGIN_INTRODUCTION         "CustomMapX"
+#define PLUGIN_INTRODUCTION         "A Custom Map Plugins"
 #define PLUGIN_AUTHOR               "QingYu"
 #define PLUGIN_VERSION_MAJOR        1
-#define PLUGIN_VERSION_MINOR        0
-#define PLUGIN_VERSION_REVISION     3
+#define PLUGIN_VERSION_MINOR        1
+#define PLUGIN_VERSION_REVISION     0
 #define PLUGIN_VERSION_BUILD        0
 #define PLUGIN_VERSION_STATUS       PLUGIN_VERSION_DEV
 

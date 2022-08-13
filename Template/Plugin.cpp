@@ -21,6 +21,7 @@
 #include <MC/Container.hpp>
 #include <Utils/StringHelper.h>
 #include "Setting.h"
+std::unordered_map<string, time_t> tempList;
 
 
 Logger logger(PLUGIN_NAME);
@@ -50,6 +51,14 @@ inline void getAllFiles(std::string strPath, std::vector<std::string>& vecFiles)
 			vecFiles.push_back(UTF82String(itr.path().filename().u8string()));
 		}
 	}
+}
+
+time_t getTimeStamp()
+{
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
+	auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
+	std::time_t timestamp = tmp.count();
+	return timestamp;
 }
 
 std::mutex mtx;
@@ -263,6 +272,8 @@ namespace Helper {
 				std::vector<unsigned char> image;
 				image.resize(w * h * 4);
 				memcpy(image.data(), (void*)out[2], w * h * 4);
+				if (!pl->isOP())
+					tempList[pl->getRealName()] = getTimeStamp();
 				return std::make_tuple(image, w, h);
 			}
 		}
@@ -308,6 +319,8 @@ namespace Helper {
 					image.resize(w * h * 4);
 					memcpy(image.data(), (void*)out[2], w * h * 4);
 					isChange = std::make_tuple(true, image, w, h, plname);
+					if(!pl->isOP())
+						tempList[plname] = getTimeStamp();
 					return;
 				}
 			}
@@ -434,19 +447,21 @@ void RegCommand()
 	getAllFiles(".\\plugins\\CustomMapX\\picture", out);
 
     auto command = DynamicCommand::createCommand("map", "CustomMapX", CommandPermissionLevel::Any);
-
-	auto& MaphelpEnum = command->setEnum("MaphelpEnum", { "reload","help"});
+	auto& MapReloadEnum = command->setEnum("MapReloadEnum", { "reload" });
+	auto& MaphelpEnum = command->setEnum("MaphelpEnum", {"help" });
 	auto& MapAddEnum = command->setEnum("MapAddEnum", { "add"});
 	auto& MapUrlEnum = command->setEnum("MapUrlEnum", { "download" });
 	
     command->mandatory("MapsEnum", ParamType::Enum, MaphelpEnum, CommandParameterOption::EnumAutocompleteExpansion);
 	command->mandatory("MapsEnum", ParamType::Enum, MapAddEnum, CommandParameterOption::EnumAutocompleteExpansion);
 	command->mandatory("MapsEnum", ParamType::Enum, MapUrlEnum, CommandParameterOption::EnumAutocompleteExpansion);
+	command->mandatory("MapsEnum", ParamType::Enum, MapReloadEnum, CommandParameterOption::EnumAutocompleteExpansion);
     command->mandatory("MapSoftEnum", ParamType::SoftEnum, command->setSoftEnum("MapENameList", out));
 	command->mandatory("UrlStr", ParamType::String);
 
     command->addOverload({ MapAddEnum,"MapSoftEnum"});
 	command->addOverload({ MaphelpEnum });
+	command->addOverload({ MapReloadEnum });
 	command->addOverload({ MapUrlEnum, "UrlStr"});
 	
 	command->setCallback([](DynamicCommand const& command, CommandOrigin const& origin, CommandOutput& output, std::unordered_map<std::string, DynamicCommand::Result>& results) {
@@ -457,29 +472,39 @@ void RegCommand()
 			{
 			case do_hash("add"): {
 				if (sp) {
-					if (sp->isOP() || Settings::LocalImg::allowmember) {
-						auto picfile = results["MapSoftEnum"].get<std::string>();
-						if (!picfile.empty()) {
-							auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile,sp);
-							Helper::createImg(data, w, h, sp, picfile);
+					if (tempList.find(sp->getRealName()) == tempList.end()) {
+						if (sp->isOP() || Settings::LocalImg::allowmember) {
+							auto picfile = results["MapSoftEnum"].get<std::string>();
+							if (!picfile.empty()) {
+								auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile, sp);
+								Helper::createImg(data, w, h, sp, picfile);
+							}
+						}
+						else {
+							sp->sendText("§l§6[CustomMapX] §cYou are not allowed to add img map!");
 						}
 					}
 					else {
-						sp->sendText("§l§6[CustomMapX] §cYou are not allowed to add img map!");
+						sp->sendText("§l§6[CustomMapX] §cFrequent operation, please try again later!\n§gRemaining time:" + std::to_string(Settings::memberRateLimit - ((getTimeStamp() - tempList[sp->getRealName()]) / 1000)) + "s");
 					}
 				}
 				break;
 			}
 			case do_hash("download"): {
 				if (sp) {
-					if (sp->isOP() || Settings::DownloadImg::allowmember) {
-						auto url = results["UrlStr"].getRaw<std::string>();
-						std::thread th(Helper::Url2Pix, url, sp->getRealName());
-						th.detach();
-						output.success("§l§6[CustomMapX] §aGenerating, please wait!");
+					if (tempList.find(sp->getRealName()) == tempList.end()) {
+						if (sp->isOP() || Settings::DownloadImg::allowmember) {
+							auto url = results["UrlStr"].getRaw<std::string>();
+							std::thread th(Helper::Url2Pix, url, sp->getRealName());
+							th.detach();
+							output.success("§l§6[CustomMapX] §aGenerating, please wait!");
+						}
+						else {
+							sp->sendText("§l§6[CustomMapX] §cYou are not allowed to download img map!");
+						}
 					}
 					else {
-						sp->sendText("§l§6[CustomMapX] §cYou are not allowed to download img map!");					
+						sp->sendText("§l§6[CustomMapX] §cFrequent operation, please try again later!\n§gRemaining time:" + std::to_string(Settings::memberRateLimit - ((getTimeStamp() - tempList[sp->getRealName()]) / 1000)) + "s");
 					}
 				}
 				break;
@@ -489,16 +514,17 @@ void RegCommand()
 					vector<string> out;
 					getAllFiles(".\\plugins\\CustomMapX\\picture", out);
 					command.getInstance()->addSoftEnumValues("MapENameList", out);
-					Settings::reloadJson(JsonFile);
+					Settings::LoadConfigFromJson(JsonFile);
+					output.success("§l§6[CustomMapX] §aReload Success!");
 				}
 				break;
 			}
 			case do_hash("help"): {
 				output.success(
 					"§l§e>§6CustomMapX§e<\n"
-					"§b/map add §l§a<mapfile> §l§gAdd maps\n"
-					"§b/map download §l§a<url> §l§gDownload maps\n"
-					"§b/map reload §l§gRefresh picture path\n"
+					"§b/map add §a<mapfile> §gAdd maps\n"
+					"§b/map download §a<url> §gDownload maps\n"
+					"§b/map reload §gRefresh picture path\n"
 					"§b/map help\n"
 					"§l§e>§6CustomMapX§e<");
 				break;
@@ -509,6 +535,20 @@ void RegCommand()
      });
 	DynamicCommand::setup(std::move(command));
 }
+
+void Sche() {
+	Schedule::repeat([] {
+		if (tempList.size() > 0) {
+			auto nowtime = getTimeStamp();
+			for (auto& [name, time] : tempList) {
+				if (nowtime - time > Settings::memberRateLimit * 1000) {
+					tempList.erase(name);
+				}
+			}
+		}
+		}, 20);
+}
+
 
 void loadCfg() {
 	//config
@@ -548,6 +588,7 @@ void PluginInit()
 	RegCommand();
 	Event::ServerStartedEvent::subscribe([] (const Event::ServerStartedEvent& ev) {
 		Change();
+		Sche();
 		return true;
 		});
 }
@@ -662,7 +703,6 @@ bool UseItemSupply(Player* sp, ItemStackBase& item, string itemname, short aux) 
 							}
 							if (isgive2) {
 								auto snbt = const_cast<ItemStack*>(&item)->getNbt()->toBinaryNBT();
-
 								auto& uid = sp->getUniqueID();
 								Schedule::delay([snbt, uid, slotnum, i] {
 								auto newitem = ItemStack::create(CompoundTag::fromBinaryNBT(snbt));

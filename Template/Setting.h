@@ -4,6 +4,7 @@
 
 
 namespace Settings {
+    extern int memberRateLimit;
     namespace DownloadImg {
         extern bool allowmember;
     }

@@ -14,6 +14,7 @@ if (json.find(key) != json.end()) {                          \
 
 namespace Settings {
 
+    int memberRateLimit = 60;
     namespace DownloadImg {
         bool allowmember = false;
     }
@@ -28,6 +29,7 @@ namespace Settings {
 
     nlohmann::json globaljson() {
         nlohmann::json json;
+        json["MemberRateLimit"] = memberRateLimit;
         json["DownloadImg"]["Allow-Member"] = DownloadImg::allowmember;
         json["LocalImg"]["Allow-Member"] = LocalImg::allowmember;
         json["ImgSize"]["maxWidth"] = ImgSize::maxWidth;
@@ -37,6 +39,7 @@ namespace Settings {
     }
 
     void initjson(nlohmann::json json) {
+        JSON1("MemberRateLimit", memberRateLimit);
         JSON2("DownloadImg", "Allow-Member", DownloadImg::allowmember);
         JSON2("LocalImg", "Allow-Member", LocalImg::allowmember);
         JSON2("ImgSize", "maxWidth", ImgSize::maxWidth);
