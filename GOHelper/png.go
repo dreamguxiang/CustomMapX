@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -48,7 +49,7 @@ func png2PixelArr(paths string) C.CgoSlice {
 	if err != nil {
 		var ret C.CgoSlice
 		ret.data = nil
-		ret.len = C.longlong(-1)
+		ret.len = C.longlong(-2)
 		ret.cap = C.longlong(0)
 		return ret
 	}
@@ -80,12 +81,26 @@ func IntToBytes(n int) []byte {
 	binary.Write(bytesBuffer, binary.BigEndian, x)
 	return bytesBuffer.Bytes()
 }
+
 func isURL(urls string) bool {
 	_, err := url.ParseRequestURI(urls)
 	if err != nil {
 		return false
 	}
 	return true
+}
+
+func ReadConfig() (int64, int64, int64) {
+	data, err := ioutil.ReadFile("plugins\\CustomMapX\\config.json")
+	if err != nil {
+		return 0, 0, 0
+	}
+	var root RootEntity
+	err = json.Unmarshal(data, &root)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return root.ImgSize.MaxWidth, root.ImgSize.MaxHeight, root.ImgSize.MaxFileSize
 }
 
 //export getUrlPngData
@@ -97,12 +112,13 @@ func getUrlPngData(url string) C.CgoSlice {
 		if err != nil {
 			var ret C.CgoSlice
 			ret.data = nil
-			ret.len = C.longlong(-1)
+			ret.len = C.longlong(-4)
 			ret.cap = C.longlong(0)
 			return ret
 		}
+		maxw, maxh, maxsize := ReadConfig()
 		length := float64(header.ContentLength) / 1024 / 1024
-		if length != 0 && length <= 25 {
+		if length != 0 && length <= float64(maxsize) {
 			resp, err := http.Get(url)
 			defer resp.Body.Close()
 			if err != nil {
@@ -125,7 +141,7 @@ func getUrlPngData(url string) C.CgoSlice {
 				if err != nil {
 					var ret C.CgoSlice
 					ret.data = nil
-					ret.len = C.longlong(-1)
+					ret.len = C.longlong(-3)
 					ret.cap = C.longlong(0)
 					return ret
 				}
@@ -133,11 +149,18 @@ func getUrlPngData(url string) C.CgoSlice {
 				if err != nil {
 					var ret C.CgoSlice
 					ret.data = nil
-					ret.len = C.longlong(-1)
+					ret.len = C.longlong(-5)
 					ret.cap = C.longlong(0)
 					return ret
 				}
 				w, h := img.Bounds().Dx(), img.Bounds().Dy()
+				if int64(w) > maxw || int64(h) > maxh {
+					var ret C.CgoSlice
+					ret.data = nil
+					ret.len = C.longlong(-2)
+					ret.cap = C.longlong(0)
+					return ret
+				}
 				data := make([]byte, 0, w*h*4)
 				for y := 0; y < h; y++ {
 					for x := 0; x < w; x++ {

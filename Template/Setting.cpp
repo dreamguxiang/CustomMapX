@@ -20,17 +20,28 @@ namespace Settings {
     namespace LocalImg {
         bool allowmember = false;
     }
+    namespace ImgSize {
+		int maxWidth = 1408;
+		int maxHeight = 1408;
+        int maxFileSize = 15;
+    }
 
     nlohmann::json globaljson() {
         nlohmann::json json;
         json["DownloadImg"]["Allow-Member"] = DownloadImg::allowmember;
         json["LocalImg"]["Allow-Member"] = LocalImg::allowmember;
+        json["ImgSize"]["maxWidth"] = ImgSize::maxWidth;
+        json["ImgSize"]["maxHeight"] = ImgSize::maxHeight;
+        json["ImgSize"]["maxFileSize"] = ImgSize::maxFileSize;
         return json;
     }
 
     void initjson(nlohmann::json json) {
         JSON2("DownloadImg", "Allow-Member", DownloadImg::allowmember);
         JSON2("LocalImg", "Allow-Member", LocalImg::allowmember);
+        JSON2("ImgSize", "maxWidth", ImgSize::maxWidth);
+        JSON2("ImgSize", "maxHeight", ImgSize::maxHeight);
+        JSON2("ImgSize", "maxFileSize", ImgSize::maxFileSize);
     }
 
     void WriteDefaultConfig(const std::string& fileName) {

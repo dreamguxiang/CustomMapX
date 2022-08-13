@@ -238,18 +238,33 @@ namespace Helper {
 		return result;
 	}
 
-	const std::tuple<std::vector<unsigned char>, unsigned, unsigned> Png2Pix(string path) {
+	const std::tuple<std::vector<unsigned char>, unsigned, unsigned> Png2Pix(string path,ServerPlayer* pl) {
 		GoString paths{ path.c_str(),(int64_t)path.size() };
 		auto imagedata = GolangFunc::png2PixelArr(paths);
 		auto data = imagedata.data();
-		auto out = split(data);
-		if (out.size() == 3) {
-			int w = atoi(out[0]);
-			int h = atoi(out[1]);
-			std::vector<unsigned char> image;
-			image.resize(w * h * 4);
-			memcpy(image.data(), (void*)out[2], w * h * 4);
-			return std::make_tuple(image, w, h);
+		if (pl) {
+			switch (imagedata.length())
+			{
+			case -1: {
+				pl->sendText("§l§6[CustomMapX] §cImage does not exist!");
+				return std::make_tuple(std::vector<unsigned char>(), 0, 0);
+			}
+			case -2: {
+				pl->sendText("§l§6[CustomMapX] §cImage decoding failure!");
+				return std::make_tuple(std::vector<unsigned char>(), 0, 0);
+			}
+			}
+		}
+		if (imagedata.length() != 0 && data != nullptr) {
+			auto out = split(data);
+			if (out.size() == 3) {
+				int w = atoi(out[0]);
+				int h = atoi(out[1]);
+				std::vector<unsigned char> image;
+				image.resize(w * h * 4);
+				memcpy(image.data(), (void*)out[2], w * h * 4);
+				return std::make_tuple(image, w, h);
+			}
 		}
 		return std::make_tuple(std::vector<unsigned char>(), 0, 0);
 	}
@@ -259,18 +274,44 @@ namespace Helper {
 			GoString urls{ url.c_str(),(int64_t)url.size() };
 			auto imagedata = GolangFunc::getUrlPngData(urls);
 			auto data = imagedata.data();
-			auto out = split(data);
-			if (out.size() == 3) {
-				int w = atoi(out[0]);
-				int h = atoi(out[1]);
-				std::vector<unsigned char> image;
-				image.resize(w * h * 4);
-				memcpy(image.data(), (void*)out[2], w * h * 4);
-				isChange = std::make_tuple(true, image, w, h, plname);
-				return;
+			auto pl = Global<Level>->getPlayer(plname);
+			if (pl) {
+				switch (imagedata.length())
+				{
+				case -1: {
+					pl->sendText("§l§6[CustomMapX] §cURL is not legal!");
+					return;
+				}
+				case -2: {
+					pl->sendText("§l§6[CustomMapX] §cImage out of size!");
+					return;
+				}
+				case -3: {
+					pl->sendText("§l§6[CustomMapX] §cURL is not a Image!");
+					return;
+				}
+				case -4: {
+					pl->sendText("§l§6[CustomMapX] §cURL Access failure!");
+					return;
+				}
+				case -5: {
+					pl->sendText("§l§6[CustomMapX] §cImage decoding failure!");
+				}
+				}
+			}
+			if (imagedata.length() > 0 && data != nullptr) {
+				auto out = split(data);
+				if (out.size() == 3) {
+					int w = atoi(out[0]);
+					int h = atoi(out[1]);
+					std::vector<unsigned char> image;
+					image.resize(w * h * 4);
+					memcpy(image.data(), (void*)out[2], w * h * 4);
+					isChange = std::make_tuple(true, image, w, h, plname);
+					return;
+				}
 			}
 			isChange = std::make_tuple(false, std::vector<unsigned char>(), 0, 0, "");
-			auto pl = Global<Level>->getPlayer(plname);
 			if (pl) {
 				pl->sendText("§l§6[CustomMapX] §cAdd Map Error!");
 			}
@@ -336,10 +377,11 @@ namespace Helper {
 			MapItem::setMapNameIndex(*mapitem, MapIndex);
 			auto& mapdate = Global<Level>->_createMapSavedData(MapIndex);
 			mapdate.setLocked();
-			for (int x = 0; x < 128; x++)
+			for (int x = 0; x < 128; x++) {
 				for (int y = 0; y < 128; y++) {
 					mapdate.setPixel(data.rawColor[y + x * 128].toABGR(), y, x);
 				}
+			}
 			mapdate.save(*Global<LevelStorage>);
 			MapItem::setItemInstanceInfo(*mapitem, mapdate);
 			auto sizetest = sqrt(datalist.size());
@@ -391,20 +433,20 @@ void RegCommand()
 	vector<string> out;
 	getAllFiles(".\\plugins\\CustomMapX\\picture", out);
 
-    auto command = DynamicCommand::createCommand("map", "custommap", CommandPermissionLevel::Any);
+    auto command = DynamicCommand::createCommand("map", "CustomMapX", CommandPermissionLevel::Any);
 
-	auto& MapEnum = command->setEnum("MapEnum", { "reload","help"});
+	auto& MaphelpEnum = command->setEnum("MaphelpEnum", { "reload","help"});
 	auto& MapAddEnum = command->setEnum("MapAddEnum", { "add"});
 	auto& MapUrlEnum = command->setEnum("MapUrlEnum", { "download" });
 	
-    command->mandatory("MapsEnum", ParamType::Enum, MapEnum, CommandParameterOption::EnumAutocompleteExpansion);
+    command->mandatory("MapsEnum", ParamType::Enum, MaphelpEnum, CommandParameterOption::EnumAutocompleteExpansion);
 	command->mandatory("MapsEnum", ParamType::Enum, MapAddEnum, CommandParameterOption::EnumAutocompleteExpansion);
 	command->mandatory("MapsEnum", ParamType::Enum, MapUrlEnum, CommandParameterOption::EnumAutocompleteExpansion);
     command->mandatory("MapSoftEnum", ParamType::SoftEnum, command->setSoftEnum("MapENameList", out));
 	command->mandatory("UrlStr", ParamType::String);
 
     command->addOverload({ MapAddEnum,"MapSoftEnum"});
-	command->addOverload({ MapEnum });
+	command->addOverload({ MaphelpEnum });
 	command->addOverload({ MapUrlEnum, "UrlStr"});
 	
 	command->setCallback([](DynamicCommand const& command, CommandOrigin const& origin, CommandOutput& output, std::unordered_map<std::string, DynamicCommand::Result>& results) {
@@ -418,7 +460,7 @@ void RegCommand()
 					if (sp->isOP() || Settings::LocalImg::allowmember) {
 						auto picfile = results["MapSoftEnum"].get<std::string>();
 						if (!picfile.empty()) {
-							auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile);
+							auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile,sp);
 							Helper::createImg(data, w, h, sp, picfile);
 						}
 					}
@@ -443,12 +485,13 @@ void RegCommand()
 				break;
 			}
 			case do_hash("reload"): {
-				if (origin.getPermissionsLevel() > 1) {
+				if (origin.getPermissionsLevel() > 0) {
 					vector<string> out;
 					getAllFiles(".\\plugins\\CustomMapX\\picture", out);
 					command.getInstance()->addSoftEnumValues("MapENameList", out);
-					break;
+					Settings::reloadJson(JsonFile);
 				}
+				break;
 			}
 			case do_hash("help"): {
 				output.success(
