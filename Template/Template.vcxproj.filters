@@ -27,10 +27,10 @@
     <ClInclude Include="godef.h">
       <Filter>Header</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryModule.h">
+    <ClInclude Include="GoLang.hpp">
       <Filter>Header</Filter>
     </ClInclude>
-    <ClInclude Include="GoLang.hpp">
+    <ClInclude Include="Setting.h">
       <Filter>Header</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,8 +41,8 @@
     <ClCompile Include="Plugin.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="MemoryModule.c">
-      <Filter>Header</Filter>
+    <ClCompile Include="Setting.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

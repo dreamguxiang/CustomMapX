@@ -20,6 +20,9 @@
 #include <MC/ServerPlayer.hpp>
 #include <MC/Container.hpp>
 #include <Utils/StringHelper.h>
+#include "Setting.h"
+
+
 Logger logger(PLUGIN_NAME);
 
 inline void getAllFiles(std::string strPath, std::vector<std::string>& vecFiles)
@@ -188,18 +191,31 @@ extern HMODULE DllMainPtr;
 //#include"MemoryModule.h"
 #include "GoLang.hpp"
 void golang() {
-	/*HRSRC DLL = ::FindResource(DllMainPtr, MAKEINTRESOURCE(4), L"DLL");
-	unsigned int ResSize = ::SizeofResource(DllMainPtr, DLL);
-	HGLOBAL ResData = ::LoadResource(DllMainPtr, DLL);
-	void* ResDataRef = ::LockResource(ResData);
-	HMEMORYMODULE lib = MemoryLoadLibrary(ResDataRef, ResSize);*/
-	auto lib = LoadLibrary(L"MAP_Golang_Module.dll");
-	if (lib) {
-		GolangFunc::png2PixelArr = (GolangFunc::FuncDef::png2PixelArr)GetProcAddress(lib, "png2PixelArr");
-		GolangFunc::getUrlPngData = (GolangFunc::FuncDef::getUrlPngData)GetProcAddress(lib, "getUrlPngData");
+	//HRSRC DLL = ::FindResource(DllMainPtr, MAKEINTRESOURCE(4), L"DLL");
+	//DWORD ResSize = ::SizeofResource(DllMainPtr, DLL);
+	//HGLOBAL ResData = ::LoadResource(DllMainPtr, DLL);
+	//void* ResDataRef = ::LockResource(ResData);
+	//HMEMORYMODULE lib = MemoryLoadLibrary(ResDataRef, ResSize);
+	//if (lib) {
+	//	GolangFunc::png2PixelArr = (GolangFunc::FuncDef::png2PixelArr)MemoryGetProcAddress(lib, "png2PixelArr");
+	//	GolangFunc::getUrlPngData = (GolangFunc::FuncDef::getUrlPngData)MemoryGetProcAddress(lib, "getUrlPngData");
+	//}
+	//else {
+	//	Logger("CustomNpcModule").warn("Failed to load MAP_SubModule");
+	//}
+	
+	if (std::filesystem::exists("MAP_Golang_Module.dll")) {
+		auto lib = LoadLibrary(L"plugins/lib/MAP_Golang_Module.dll");
+		if (lib) {
+			GolangFunc::png2PixelArr = (GolangFunc::FuncDef::png2PixelArr)GetProcAddress(lib, "png2PixelArr");
+			GolangFunc::getUrlPngData = (GolangFunc::FuncDef::getUrlPngData)GetProcAddress(lib, "getUrlPngData");
+		}
+		else {
+			logger.error("Failed to load MAP_SubModule");
+		}
 	}
 	else {
-		Logger("CustomNpcModule").warn("Failed to load MAP_SubModule");
+		logger.error("Failed to load MAP_SubModule");
 	}
 }
 namespace Helper {
@@ -239,39 +255,35 @@ namespace Helper {
 	}
 
 	void Url2Pix(string url,string plname) {
-		GoString urls{ url.c_str(),(int64_t)url.size() };
-		auto imagedata = GolangFunc::getUrlPngData(urls);
-		auto data = imagedata.data();
-		auto out = split(data);
-		if (out.size() == 3) {
-			int w = atoi(out[0]);
-			int h = atoi(out[1]);
-			std::vector<unsigned char> image;
-			image.resize(w * h * 4);
-			memcpy(image.data(), (void*)out[2], w * h * 4);
-			isChange = std::make_tuple(true, image, w, h, plname);
+		try {
+			GoString urls{ url.c_str(),(int64_t)url.size() };
+			auto imagedata = GolangFunc::getUrlPngData(urls);
+			auto data = imagedata.data();
+			auto out = split(data);
+			if (out.size() == 3) {
+				int w = atoi(out[0]);
+				int h = atoi(out[1]);
+				std::vector<unsigned char> image;
+				image.resize(w * h * 4);
+				memcpy(image.data(), (void*)out[2], w * h * 4);
+				isChange = std::make_tuple(true, image, w, h, plname);
+				return;
+			}
+			isChange = std::make_tuple(false, std::vector<unsigned char>(), 0, 0, "");
+			auto pl = Global<Level>->getPlayer(plname);
+			if (pl) {
+				pl->sendText("§l§6[CustomMapX] §cAdd Map Error!");
+			}
 			return;
 		}
-		isChange = std::make_tuple(false, std::vector<unsigned char>(), 0, 0,"");
-		auto pl = Global<Level>->getPlayer(plname);
-		if (pl) {
-			pl->sendText("§l§6[CustomMapX] §cAdd Map Error!");
+		catch (...) {
+			auto pl = Global<Level>->getPlayer(plname);
+			if (pl) {
+				isChange = std::make_tuple(false, std::vector<unsigned char>(), 0, 0, "");
+				pl->sendText("§l§6[CustomMapX] §cAdd Map Error!");
+			}
 		}
-		return;
 	}
-
-	//std::tuple<std::vector<unsigned char>, unsigned, unsigned> Png2Pix(string path) {
-	//	std::vector<unsigned char> png, image;
-	//	unsigned w, h;
-	//	unsigned error = lodepng::load_file(png,path);
-	//	if (!error) error = lodepng::decode(image, w, h, png);
-
-	//	if (error) {
-	//		logger.warn("Failed to load skin image(2): " + path);
-	//		return {};
-	//	}
-	//	return std::make_tuple(image, w, h);
-	//}
 
 	vector<Image2D> CuttingImages(std::vector<mce::Color> image, int width, int height) {
 		vector<Image2D> images;
@@ -302,6 +314,7 @@ namespace Helper {
 		}
 		return images;
 	}
+	
 	void createImg(std::vector<unsigned char> data, unsigned w, unsigned h, ServerPlayer* sp, string picfile) {
 		if (data.size() == 0) return;
 		vector<mce::Color> Colorlist;
@@ -342,6 +355,7 @@ namespace Helper {
 		}
 		sp->sendText("§l§6[CustomMapX] §aAdd Map Success!(" + std::to_string(datalist.size()) + ")");
 	}
+	
 	string rand_str(const int len)
 	{
 		string str;
@@ -377,7 +391,7 @@ void RegCommand()
 	vector<string> out;
 	getAllFiles(".\\plugins\\CustomMapX\\picture", out);
 
-    auto command = DynamicCommand::createCommand("map", "custommap", CommandPermissionLevel::GameMasters);
+    auto command = DynamicCommand::createCommand("map", "custommap", CommandPermissionLevel::Any);
 
 	auto& MapEnum = command->setEnum("MapEnum", { "reload","help"});
 	auto& MapAddEnum = command->setEnum("MapAddEnum", { "add"});
@@ -401,29 +415,40 @@ void RegCommand()
 			{
 			case do_hash("add"): {
 				if (sp) {
-					auto picfile = results["MapSoftEnum"].get<std::string>();
-					if (!picfile.empty()) {
-						auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile);
-						Helper::createImg(data, w, h, sp, picfile);
+					if (sp->isOP() || Settings::LocalImg::allowmember) {
+						auto picfile = results["MapSoftEnum"].get<std::string>();
+						if (!picfile.empty()) {
+							auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile);
+							Helper::createImg(data, w, h, sp, picfile);
+						}
+					}
+					else {
+						sp->sendText("§l§6[CustomMapX] §cYou are not allowed to add img map!");
 					}
 				}
 				break;
 			}
 			case do_hash("download"): {
 				if (sp) {
-					auto url = results["UrlStr"].getRaw<std::string>();
-					std::thread th(Helper::Url2Pix, url,sp->getRealName());
-					th.detach();
-					output.success("§l§6[CustomMapX] §aGenerating, please wait!");
-					//Helper::createImg(data, w, h, output, sp, Helper::rand_str(5));
+					if (sp->isOP() || Settings::DownloadImg::allowmember) {
+						auto url = results["UrlStr"].getRaw<std::string>();
+						std::thread th(Helper::Url2Pix, url, sp->getRealName());
+						th.detach();
+						output.success("§l§6[CustomMapX] §aGenerating, please wait!");
+					}
+					else {
+						sp->sendText("§l§6[CustomMapX] §cYou are not allowed to download img map!");					
+					}
 				}
 				break;
 			}
 			case do_hash("reload"): {
-				vector<string> out;
-				getAllFiles(".\\plugins\\CustomMapX\\picture", out);
-				command.getInstance()->addSoftEnumValues("MapENameList",out);
-				break;
+				if (origin.getPermissionsLevel() > 1) {
+					vector<string> out;
+					getAllFiles(".\\plugins\\CustomMapX\\picture", out);
+					command.getInstance()->addSoftEnumValues("MapENameList", out);
+					break;
+				}
 			}
 			case do_hash("help"): {
 				output.success(
@@ -442,8 +467,35 @@ void RegCommand()
 	DynamicCommand::setup(std::move(command));
 }
 
+void loadCfg() {
+	//config
+	if (!std::filesystem::exists("plugins/CustomMapX"))
+		std::filesystem::create_directories("plugins/CustomMapX");
+	if (std::filesystem::exists(JsonFile)) {
+		try {
+			Settings::LoadConfigFromJson(JsonFile);
+		}
+		catch (std::exception& e) {
+			logger.error("Config File isInvalid, Err {}", e.what());
+			Sleep(1000 * 100);
+			exit(1);
+		}
+		catch (...) {
+			logger.error("Config File isInvalid");
+			Sleep(1000 * 100);
+			exit(1);
+		}
+	}
+	else {
+		logger.info("Config with default values created");
+		Settings::WriteDefaultConfig(JsonFile);
+	}
+}
+
+
 void PluginInit()
 {
+	loadCfg();
 	golang();
 	logger.info("Loaded");
 	if (!std::filesystem::exists("plugins/CustomMapX"))
@@ -531,11 +583,9 @@ bool UseItemSupply(Player* sp, ItemStackBase& item, string itemname, short aux) 
 						isgive = 1;
 					}
 					if (isgive) {
-						auto snbt = const_cast<ItemStack*>(&item)->getNbt()->toSNBT();
-
-			
+						auto snbt = const_cast<ItemStack*>(&item)->getNbt()->toBinaryNBT();		
 						Schedule::delay([snbt, uid, slotnum, i] {
-							auto newitem = ItemStack::create(CompoundTag::fromSNBT(snbt));
+							auto newitem = ItemStack::create(CompoundTag::fromBinaryNBT(snbt));
 							auto sp = Global<Level>->getPlayer(uid);
 							if (sp) {
 								if (sp->getHandSlot()->isNull()) {
@@ -568,11 +618,11 @@ bool UseItemSupply(Player* sp, ItemStackBase& item, string itemname, short aux) 
 								isgive2 = 1;
 							}
 							if (isgive2) {
-								auto snbt = const_cast<ItemStack*>(&item)->getNbt()->toSNBT();
+								auto snbt = const_cast<ItemStack*>(&item)->getNbt()->toBinaryNBT();
 
 								auto& uid = sp->getUniqueID();
 								Schedule::delay([snbt, uid, slotnum, i] {
-								auto newitem = ItemStack::create(CompoundTag::fromSNBT(snbt));
+								auto newitem = ItemStack::create(CompoundTag::fromBinaryNBT(snbt));
 								auto sp = Global<Level>->getPlayer(uid);
 								if (sp) {
 									if (sp->getHandSlot()->isNull()) {
