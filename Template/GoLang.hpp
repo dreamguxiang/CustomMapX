@@ -3,11 +3,9 @@
 
 namespace GolangFunc {
     namespace FuncDef {
-        typedef GoSlice<char> (*png2PixelArr)(GoString path);
-        typedef GoInt32 (*getPngWidth)(GoString path);
-		typedef GoInt32 (*getPngHeight)(GoString path);
+        typedef GoSlice<char> (*png2PixelArr)(GoString);
+        typedef GoSlice<char>(*getUrlPngData)(GoString);
     } // namespace FuncDef
     FuncDef::png2PixelArr png2PixelArr;
-	FuncDef::getPngWidth getPngWidth;
-	FuncDef::getPngHeight getPngHeight;
+	FuncDef::getUrlPngData getUrlPngData;
 } // namespace GolangFunc

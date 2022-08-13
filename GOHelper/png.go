@@ -5,9 +5,9 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"net/url"
 	"os"
 	"strconv"
-	"unsafe"
 )
 
 /*
@@ -23,7 +23,6 @@ typedef struct {
 import "C"
 import (
 	"bytes"
-	"fmt"
 	imgext "github.com/shamsher31/goimgext"
 	_ "image/gif"
 	"io"
@@ -81,83 +80,91 @@ func IntToBytes(n int) []byte {
 	binary.Write(bytesBuffer, binary.BigEndian, x)
 	return bytesBuffer.Bytes()
 }
-
-//export FreePointer
-func FreePointer(p unsafe.Pointer) {
-	C.free(p)
-}
-
-//export getPngWidth
-func getPngWidth(paths string) int {
-	r, err := os.Open(paths)
+func isURL(urls string) bool {
+	_, err := url.ParseRequestURI(urls)
 	if err != nil {
-		return 0
+		return false
 	}
-	defer r.Close()
-	img, _, err := image.Decode(r)
-	if err != nil {
-		return 0
-	}
-	return img.Bounds().Dx()
-}
-
-//export getPngHeight
-func getPngHeight(paths string) int {
-	r, err := os.Open(paths)
-	if err != nil {
-		return 0
-	}
-	defer r.Close()
-	img, _, err := image.Decode(r)
-	if err != nil {
-		return 0
-	}
-	return img.Bounds().Dy()
+	return true
 }
 
 //export getUrlPngData
-func getUrlPngData(url string) unsafe.Pointer {
+func getUrlPngData(url string) C.CgoSlice {
 	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
 	image.RegisterFormat("jpeg", "jpeg", jpeg.Decode, jpeg.DecodeConfig)
-	header, err := http.Head(url)
-	if err != nil {
-		return nil
-	}
-	length := float64(header.ContentLength) / 1024 / 1024
-	if length != 0 && length <= 25 {
-		resp, err := http.Get(url)
-		defer resp.Body.Close()
+	if isURL(url) {
+		header, err := http.Head(url)
 		if err != nil {
-			return nil
+			var ret C.CgoSlice
+			ret.data = nil
+			ret.len = C.longlong(-1)
+			ret.cap = C.longlong(0)
+			return ret
 		}
-		allbody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil
-		}
-		imgtype := GetImageType(ioutil.NopCloser(bytes.NewReader(allbody)))
-		if imgtype != "" {
+		length := float64(header.ContentLength) / 1024 / 1024
+		if length != 0 && length <= 25 {
+			resp, err := http.Get(url)
+			defer resp.Body.Close()
 			if err != nil {
-				return nil
+				var ret C.CgoSlice
+				ret.data = nil
+				ret.len = C.longlong(-1)
+				ret.cap = C.longlong(0)
+				return ret
 			}
-			img, _, err := image.Decode(ioutil.NopCloser(bytes.NewReader(allbody)))
+			allbody, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				fmt.Println(err.Error())
-				return nil
+				var ret C.CgoSlice
+				ret.data = nil
+				ret.len = C.longlong(-1)
+				ret.cap = C.longlong(0)
+				return ret
 			}
-			w, h := img.Bounds().Dx(), img.Bounds().Dy()
-			data := make([]byte, 0, w*h*4)
-			for y := 0; y < h; y++ {
-				for x := 0; x < w; x++ {
-					r, g, b, a := img.At(x, y).RGBA()
-					data = append(data, byte(r>>8), byte(g>>8), byte(b>>8), byte(a>>8))
+			imgtype := GetImageType(ioutil.NopCloser(bytes.NewReader(allbody)))
+			if imgtype != "" {
+				if err != nil {
+					var ret C.CgoSlice
+					ret.data = nil
+					ret.len = C.longlong(-1)
+					ret.cap = C.longlong(0)
+					return ret
 				}
+				img, _, err := image.Decode(ioutil.NopCloser(bytes.NewReader(allbody)))
+				if err != nil {
+					var ret C.CgoSlice
+					ret.data = nil
+					ret.len = C.longlong(-1)
+					ret.cap = C.longlong(0)
+					return ret
+				}
+				w, h := img.Bounds().Dx(), img.Bounds().Dy()
+				data := make([]byte, 0, w*h*4)
+				for y := 0; y < h; y++ {
+					for x := 0; x < w; x++ {
+						r, g, b, a := img.At(x, y).RGBA()
+						data = append(data, byte(r>>8), byte(g>>8), byte(b>>8), byte(a>>8))
+					}
+				}
+				out := []byte(strconv.Itoa(w))
+				out = append(out, []byte{'\n'}...)
+				out = append(out, strconv.Itoa(h)...)
+				out = append(out, []byte{'\n'}...)
+				out = append(out, data...)
+
+				var ret C.CgoSlice
+				ret.data = C.CBytes(out)
+				ret.len = C.longlong(len(out))
+				ret.cap = C.longlong(len(out))
+
+				return ret
 			}
-			str := string(data)
-			p := unsafe.Pointer(C.CString(str))
-			return p
 		}
 	}
-	return nil
+	var ret C.CgoSlice
+	ret.data = nil
+	ret.len = C.longlong(-1)
+	ret.cap = C.longlong(0)
+	return ret
 }
 
 func GetImageType(reader io.ReadCloser) string {

@@ -16,6 +16,9 @@
 #include <ServerAPI.h>
 #include <DynamicCommandAPI.h>
 #include <ScheduleAPI.h>
+#include <MC/MapItem.hpp>
+#include <MC/ServerPlayer.hpp>
+#include <MC/Container.hpp>
 #include <Utils/StringHelper.h>
 Logger logger(PLUGIN_NAME);
 
@@ -45,6 +48,12 @@ inline void getAllFiles(std::string strPath, std::vector<std::string>& vecFiles)
 		}
 	}
 }
+
+std::mutex mtx;
+#include <ScheduleAPI.h>
+std::tuple<bool, std::vector<unsigned char>, unsigned, unsigned,string> isChange = std::make_tuple(false, std::vector<unsigned char>(), 0, 0,"");
+
+
 namespace mce{
 	
 class Blob {
@@ -173,9 +182,7 @@ public:
 	
 	unsigned width = 0, height = 0;
 
-	Image2D(unsigned w, unsigned h, vector<mce::Color> c) : width(w), height(h) , rawColor(c) {
-		
-	}
+	Image2D(unsigned w, unsigned h, vector<mce::Color> c) : width(w), height(h), rawColor(c) {};
 };
 extern HMODULE DllMainPtr;
 //#include"MemoryModule.h"
@@ -187,11 +194,9 @@ void golang() {
 	void* ResDataRef = ::LockResource(ResData);
 	HMEMORYMODULE lib = MemoryLoadLibrary(ResDataRef, ResSize);*/
 	auto lib = LoadLibrary(L"MAP_Golang_Module.dll");
-
 	if (lib) {
 		GolangFunc::png2PixelArr = (GolangFunc::FuncDef::png2PixelArr)GetProcAddress(lib, "png2PixelArr");
-		GolangFunc::getPngWidth = (GolangFunc::FuncDef::getPngWidth)GetProcAddress(lib, "getPngWidth");
-		GolangFunc::getPngHeight = (GolangFunc::FuncDef::getPngHeight)GetProcAddress(lib, "getPngHeight");
+		GolangFunc::getUrlPngData = (GolangFunc::FuncDef::getUrlPngData)GetProcAddress(lib, "getUrlPngData");
 	}
 	else {
 		Logger("CustomNpcModule").warn("Failed to load MAP_SubModule");
@@ -217,7 +222,7 @@ namespace Helper {
 		return result;
 	}
 
-	const std::tuple<std::vector<unsigned char>, unsigned, unsigned>  Png2Pix(string path) {
+	const std::tuple<std::vector<unsigned char>, unsigned, unsigned> Png2Pix(string path) {
 		GoString paths{ path.c_str(),(int64_t)path.size() };
 		auto imagedata = GolangFunc::png2PixelArr(paths);
 		auto data = imagedata.data();
@@ -232,7 +237,29 @@ namespace Helper {
 		}
 		return std::make_tuple(std::vector<unsigned char>(), 0, 0);
 	}
-	
+
+	void Url2Pix(string url,string plname) {
+		GoString urls{ url.c_str(),(int64_t)url.size() };
+		auto imagedata = GolangFunc::getUrlPngData(urls);
+		auto data = imagedata.data();
+		auto out = split(data);
+		if (out.size() == 3) {
+			int w = atoi(out[0]);
+			int h = atoi(out[1]);
+			std::vector<unsigned char> image;
+			image.resize(w * h * 4);
+			memcpy(image.data(), (void*)out[2], w * h * 4);
+			isChange = std::make_tuple(true, image, w, h, plname);
+			return;
+		}
+		isChange = std::make_tuple(false, std::vector<unsigned char>(), 0, 0,"");
+		auto pl = Global<Level>->getPlayer(plname);
+		if (pl) {
+			pl->sendText("§l§6[CustomMapX] §cAdd Map Error!");
+		}
+		return;
+	}
+
 	//std::tuple<std::vector<unsigned char>, unsigned, unsigned> Png2Pix(string path) {
 	//	std::vector<unsigned char> png, image;
 	//	unsigned w, h;
@@ -245,7 +272,7 @@ namespace Helper {
 	//	}
 	//	return std::make_tuple(image, w, h);
 	//}
-	
+
 	vector<Image2D> CuttingImages(std::vector<mce::Color> image, int width, int height) {
 		vector<Image2D> images;
 		auto wcut = width / 128;
@@ -257,12 +284,12 @@ namespace Helper {
 		if (height % 128 != 0) {
 			hcut++;
 		}
-		for(auto h = 0; h < hcut; h++ ){
+		for (auto h = 0; h < hcut; h++) {
 			for (auto w = 0; w < wcut; w++) {
 				vector<mce::Color> img;
 				for (auto a = h * 128; a < h * 128 + 128; a++) {
-					for (auto  b = w * 128; b< w * 128 + 128; b++) {
-						if (a * width + b < image.size() &&  b * height + a < image.size()) {
+					for (auto b = w * 128; b < w * 128 + 128; b++) {
+						if (a * width + b < image.size() && b * height + a < image.size()) {
 							img.push_back(image[a * width + b]);
 						}
 						else {
@@ -275,10 +302,74 @@ namespace Helper {
 		}
 		return images;
 	}
+	void createImg(std::vector<unsigned char> data, unsigned w, unsigned h, ServerPlayer* sp, string picfile) {
+		if (data.size() == 0) return;
+		vector<mce::Color> Colorlist;
+		for (int y = 0; y < h; y++)
+		{
+			for (int x = 0; x < w; x++)
+			{
+				mce::Color img((float)data[(y * w + x) * 4 + 0] / 255, (float)data[(y * w + x) * 4 + 1] / 255, (float)data[(y * w + x) * 4 + 2] / 255, (float)data[(y * w + x) * 4 + 3] / 255);
+				Colorlist.push_back(img);
+			}
+		}
+		auto datalist = Helper::CuttingImages(Colorlist, w, h);
+		int xtemp = 0;
+		int ytemp = 0;
+		for (auto data : datalist) {
+			auto mapitem = ItemStack::create("minecraft:filled_map");
+			auto MapIndex = sp->getMapIndex();
+			sp->setMapIndex(MapIndex + 1);
+			MapItem::setMapNameIndex(*mapitem, MapIndex);
+			auto& mapdate = Global<Level>->_createMapSavedData(MapIndex);
+			mapdate.setLocked();
+			for (int x = 0; x < 128; x++)
+				for (int y = 0; y < 128; y++) {
+					mapdate.setPixel(data.rawColor[y + x * 128].toABGR(), y, x);
+				}
+			mapdate.save(*Global<LevelStorage>);
+			MapItem::setItemInstanceInfo(*mapitem, mapdate);
+			auto sizetest = sqrt(datalist.size());
+			mapitem->setCustomName(picfile + "-" + std::to_string(xtemp) + "_" + std::to_string(ytemp));
+			Spawner* sps = &Global<Level>->getSpawner();
+			ItemActor* ac = sps->spawnItem(sp->getRegion(), *mapitem, nullptr, sp->getPos(), 0);
+			delete mapitem;
+			ytemp++;
+			if (ytemp == sizetest) {
+				xtemp++;
+				ytemp = 0;
+			}
+		}
+		sp->sendText("§l§6[CustomMapX] §aAdd Map Success!(" + std::to_string(datalist.size()) + ")");
+	}
+	string rand_str(const int len)
+	{
+		string str;
+		char c;
+		int idx;
+		for (idx = 0; idx < len; idx++)
+		{
+			c = 'a' + rand() % 26;
+			str.push_back(c);
+		}
+		return str;
+	}
 }
-#include <MC/MapItem.hpp>
-#include <MC/ServerPlayer.hpp>
-#include <MC/Container.hpp>
+
+void Change() {
+	Schedule::repeat([] {
+		auto [isChnage, data, w,h,plname] = isChange;
+		if (isChnage) {
+			isChange = std::make_tuple(false, std::vector<unsigned char>(), 0, 0,"");
+			auto sp = Global<Level>->getPlayer(plname);
+			if (sp->isPlayer()) {
+				Helper::createImg(data, w, h, (ServerPlayer*)sp, Helper::rand_str(5));
+			}
+		}
+		}, 20);
+}
+
+
 void RegCommand()
 {
     using ParamType = DynamicCommand::ParameterType;
@@ -289,15 +380,19 @@ void RegCommand()
     auto command = DynamicCommand::createCommand("map", "custommap", CommandPermissionLevel::GameMasters);
 
 	auto& MapEnum = command->setEnum("MapEnum", { "reload","help"});
-	auto& MapAddEnum = command->setEnum("MapAddEnum", { "add" });
+	auto& MapAddEnum = command->setEnum("MapAddEnum", { "add"});
+	auto& MapUrlEnum = command->setEnum("MapUrlEnum", { "download" });
 	
     command->mandatory("MapsEnum", ParamType::Enum, MapEnum, CommandParameterOption::EnumAutocompleteExpansion);
 	command->mandatory("MapsEnum", ParamType::Enum, MapAddEnum, CommandParameterOption::EnumAutocompleteExpansion);
+	command->mandatory("MapsEnum", ParamType::Enum, MapUrlEnum, CommandParameterOption::EnumAutocompleteExpansion);
     command->mandatory("MapSoftEnum", ParamType::SoftEnum, command->setSoftEnum("MapENameList", out));
-	
+	command->mandatory("UrlStr", ParamType::String);
+
     command->addOverload({ MapAddEnum,"MapSoftEnum"});
 	command->addOverload({ MapEnum });
-
+	command->addOverload({ MapUrlEnum, "UrlStr"});
+	
 	command->setCallback([](DynamicCommand const& command, CommandOrigin const& origin, CommandOutput& output, std::unordered_map<std::string, DynamicCommand::Result>& results) {
 		auto action = results["MapsEnum"].get<std::string>();
 		string str = "";
@@ -309,45 +404,18 @@ void RegCommand()
 					auto picfile = results["MapSoftEnum"].get<std::string>();
 					if (!picfile.empty()) {
 						auto [data, w, h] = Helper::Png2Pix(".\\plugins\\CustomMapX\\picture\\" + picfile);
-						if (data.size() == 0) return;
-						vector<mce::Color> Colorlist;
-						for (int y = 0; y < h; y++)
-						{
-							for (int x = 0; x < w; x++)
-							{
-								mce::Color img((float)data[(y * w + x) * 4 + 0] / 255, (float)data[(y * w + x) * 4 + 1] / 255, (float)data[(y * w + x) * 4 + 2] / 255, (float)data[(y * w + x) * 4 + 3] / 255);
-								Colorlist.push_back(img);
-							}
-						}
-						auto datalist = Helper::CuttingImages(Colorlist, w, h);
-						int xtemp = 0;
-						int ytemp = 0;
-						for (auto data : datalist) {
-							auto mapitem = ItemStack::create("minecraft:filled_map");
-							auto MapIndex = sp->getMapIndex();
-							sp->setMapIndex(MapIndex + 1);
-							MapItem::setMapNameIndex(*mapitem, MapIndex);
-							auto& mapdate = Global<Level>->_createMapSavedData(MapIndex);
-							mapdate.setLocked();
-							for (int x = 0; x < 128; x++)
-								for (int y = 0; y < 128; y++) {
-									mapdate.setPixel(data.rawColor[y + x * 128].toABGR(), y, x);
-								}
-							mapdate.save(*Global<LevelStorage>);
-							MapItem::setItemInstanceInfo(*mapitem, mapdate);
-							auto sizetest = sqrt(datalist.size());
-							mapitem->setCustomName(picfile + "-" + std::to_string(xtemp) + "_" + std::to_string(ytemp));
-							Spawner* sps = &Global<Level>->getSpawner();
-							ItemActor* ac = sps->spawnItem(sp->getRegion(), *mapitem, nullptr, sp->getPos(), 0);	
-							delete mapitem;
-							ytemp++;
-							if (ytemp == sizetest) {
-								xtemp++;
-								ytemp = 0;
-							}
-						}
-						output.success("§l§6[CustomMapX] §aAdd Map Success!(" + std::to_string(datalist.size()) + ")");
+						Helper::createImg(data, w, h, sp, picfile);
 					}
+				}
+				break;
+			}
+			case do_hash("download"): {
+				if (sp) {
+					auto url = results["UrlStr"].getRaw<std::string>();
+					std::thread th(Helper::Url2Pix, url,sp->getRealName());
+					th.detach();
+					output.success("§l§6[CustomMapX] §aGenerating, please wait!");
+					//Helper::createImg(data, w, h, output, sp, Helper::rand_str(5));
 				}
 				break;
 			}
@@ -361,6 +429,7 @@ void RegCommand()
 				output.success(
 					"§l§e>§6CustomMapX§e<\n"
 					"§b/map add §l§a<mapfile> §l§gAdd maps\n"
+					"§b/map download §l§a<url> §l§gDownload maps\n"
 					"§b/map reload §l§gRefresh picture path\n"
 					"§b/map help\n"
 					"§l§e>§6CustomMapX§e<");
@@ -382,6 +451,10 @@ void PluginInit()
 	if (!std::filesystem::exists("plugins/CustomMapX/picture"))
 		std::filesystem::create_directories("plugins/CustomMapX/picture");
 	RegCommand();
+	Event::ServerStartedEvent::subscribe([] (const Event::ServerStartedEvent& ev) {
+		Change();
+		return true;
+		});
 }
 
 inline vector<string> split(string a1,char a) {

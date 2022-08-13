@@ -19,7 +19,7 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 /* Start of preamble from import "C" comments.  */
 
 
-#line 13 "png.go"
+#line 12 "png.go"
 
 #include <windows.h>
 #include <stdlib.h>
@@ -81,10 +81,7 @@ extern "C" {
 #endif
 
 extern __declspec(dllexport) CgoSlice png2PixelArr(GoString paths);
-extern __declspec(dllexport) void FreePointer(void* p);
-extern __declspec(dllexport) GoInt getPngWidth(GoString paths);
-extern __declspec(dllexport) GoInt getPngHeight(GoString paths);
-extern __declspec(dllexport) void* getUrlPngData(GoString url);
+extern __declspec(dllexport) CgoSlice getUrlPngData(GoString url);
 
 #ifdef __cplusplus
 }
