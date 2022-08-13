@@ -204,7 +204,7 @@ void golang() {
 	//	Logger("CustomNpcModule").warn("Failed to load MAP_SubModule");
 	//}
 	
-	if (std::filesystem::exists("MAP_Golang_Module.dll")) {
+	if (std::filesystem::exists("plugins/lib/MAP_Golang_Module.dll")) {
 		auto lib = LoadLibrary(L"plugins/lib/MAP_Golang_Module.dll");
 		if (lib) {
 			GolangFunc::png2PixelArr = (GolangFunc::FuncDef::png2PixelArr)GetProcAddress(lib, "png2PixelArr");
