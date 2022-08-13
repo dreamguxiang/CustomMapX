@@ -118,7 +118,14 @@ func getUrlPngData(url string) C.CgoSlice {
 		}
 		maxw, maxh, maxsize := ReadConfig()
 		length := float64(header.ContentLength) / 1024 / 1024
-		if length != 0 && length <= float64(maxsize) {
+		if length > float64(maxsize) {
+			var ret C.CgoSlice
+			ret.data = nil
+			ret.len = C.longlong(-6)
+			ret.cap = C.longlong(0)
+			return ret
+		}
+		if length != 0 {
 			resp, err := http.Get(url)
 			defer resp.Body.Close()
 			if err != nil {

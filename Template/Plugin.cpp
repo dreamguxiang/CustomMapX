@@ -308,6 +308,9 @@ namespace Helper {
 				case -5: {
 					pl->sendText("§l§6[CustomMapX] §cImage decoding failure!");
 				}
+				case -6: {
+					pl->sendText("§l§6[CustomMapX] §cImage exceeds maximum allowed size!");
+				}
 				}
 			}
 			if (imagedata.length() > 0 && data != nullptr) {
@@ -580,7 +583,12 @@ void PluginInit()
 {
 	loadCfg();
 	golang();
-	logger.info("Loaded");
+	Logger().info("   ___          _      _____  __ ");
+	Logger().info("  / __\\/\\/\\    /_\\    / _ \\ \\/ / ");
+	Logger().info(" / /  /    \\  //_\\\\  / /_)/\\  /   \033[38;5;221mVersion:{}", PLUGIN_VERSION_STRING);
+	Logger().info("/ /__/ /\\/\\ \\/  _  \\/ ___/ /  \\   \033[38;5;218mGithub:{}", "https://github.com/dreamguxiang/CustomMapX");
+	Logger().info("\\____|/    \\/\\_/ \\_/\\/    /_/\\_\\ ");
+	Logger().info("");
 	if (!std::filesystem::exists("plugins/CustomMapX"))
 		std::filesystem::create_directories("plugins/CustomMapX");
 	if (!std::filesystem::exists("plugins/CustomMapX/picture"))

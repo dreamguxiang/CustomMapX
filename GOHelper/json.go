@@ -1,9 +1,10 @@
 package main
 
 type RootEntity struct {
-	DownloadImg DownloadImgEntity `json:"DownloadImg"`
-	ImgSize     ImgSizeEntity     `json:"ImgSize"`
-	LocalImg    LocalImgEntity    `json:"LocalImg"`
+	DownloadImg     DownloadImgEntity `json:"DownloadImg"`
+	ImgSize         ImgSizeEntity     `json:"ImgSize"`
+	LocalImg        LocalImgEntity    `json:"LocalImg"`
+	MemberRateLimit int64             `json:"MemberRateLimit"`
 }
 
 type DownloadImgEntity struct {
