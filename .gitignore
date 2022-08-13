@@ -11,3 +11,5 @@
 /cmake-build-*
 build/*
 /out/*
+GOHelper/MAP_Golang_Module.dll
+GOHelper/MAP_Golang_Module.h

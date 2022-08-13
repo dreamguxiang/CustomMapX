@@ -86,7 +86,6 @@ END
 // DLL
 //
 
-MAPModule          DLL                     "..\\GOHelper\\MAP_Golang_Module.dll"
 
 #endif    // 中文(简体，中国) resources
 /////////////////////////////////////////////////////////////////////////////
