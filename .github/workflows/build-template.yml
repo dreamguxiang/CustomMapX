@@ -68,7 +68,7 @@ jobs:
         id: build
         run: |
           MSBuild.exe ${{env.SOLUTION_FILE_PATH}} -property:Configuration=${{env.BUILD_CONFIGURATION}}
-          .\build.bat
+          ./build.bat
         shell: bash
       
       - name: copy dll and pdb files
