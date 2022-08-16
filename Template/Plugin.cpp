@@ -23,6 +23,7 @@
 #include "Setting.h"
 std::unordered_map<string, time_t> tempList;
 
+int MapIndex;
 
 Logger logger(PLUGIN_NAME);
 
@@ -60,6 +61,14 @@ time_t getTimeStamp()
 	std::time_t timestamp = tmp.count();
 	return timestamp;
 }
+time_t getTimeStamp2()
+{
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> tp = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
+	auto tmp = std::chrono::duration_cast<std::chrono::seconds>(tp.time_since_epoch());
+	std::time_t timestamp = tmp.count();
+	return timestamp;
+}
+
 
 std::mutex mtx;
 #include <ScheduleAPI.h>
@@ -388,8 +397,9 @@ namespace Helper {
 		int ytemp = 0;
 		for (auto data : datalist) {
 			auto mapitem = ItemStack::create("minecraft:filled_map");
-			auto MapIndex = sp->getMapIndex();
-			sp->setMapIndex(MapIndex + 1);
+			//auto MapIndex = sp->getMapIndex();
+			//sp->setMapIndex(MapIndex + 1);
+			MapIndex++;
 			MapItem::setMapNameIndex(*mapitem, MapIndex);
 			auto& mapdate = Global<Level>->_createMapSavedData(MapIndex);
 			mapdate.setLocked();
@@ -581,6 +591,8 @@ void loadCfg() {
 
 void PluginInit()
 {
+	srand(NULL);
+	MapIndex = getTimeStamp2()/rand()* getTimeStamp2();
 	loadCfg();
 	golang();
 	Logger().info("   ___          _      _____  __ ");
