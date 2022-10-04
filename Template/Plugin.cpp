@@ -1,25 +1,25 @@
 ﻿#include <iostream>
-#include <Global.h>
-#include <EventAPI.h>
-#include <LoggerAPI.h>
-#include <MC/Level.hpp>
-#include <MC/BlockInstance.hpp>
-#include <MC/Block.hpp>
-#include <MC/BlockSource.hpp>
-#include <MC/Actor.hpp>
-#include <MC/Player.hpp>
-#include <MC/ItemStack.hpp>
+#include <llapi/Global.h>
+#include <llapi/EventAPI.h>
+#include <llapi/LoggerAPI.h>
+#include <llapi/MC/Level.hpp>
+#include <llapi/MC/BlockInstance.hpp>
+#include <llapi/MC/Block.hpp>
+#include <llapi/MC/BlockSource.hpp>
+#include <llapi/MC/Actor.hpp>
+#include <llapi/MC/Player.hpp>
+#include <llapi/MC/ItemStack.hpp>
 #include "Version.h"
-#include <LoggerAPI.h>
-#include <LLAPI.h>
-#include <MC/Spawner.hpp>
-#include <ServerAPI.h>
-#include <DynamicCommandAPI.h>
-#include <ScheduleAPI.h>
-#include <MC/MapItem.hpp>
-#include <MC/ServerPlayer.hpp>
-#include <MC/Container.hpp>
-#include <Utils/StringHelper.h>
+#include <llapi/LoggerAPI.h>
+#include <llapi/LLAPI.h>
+#include <llapi/MC/Spawner.hpp>
+#include <llapi/ServerAPI.h>
+#include <llapi/DynamicCommandAPI.h>
+#include <llapi/ScheduleAPI.h>
+#include <llapi/MC/MapItem.hpp>
+#include <llapi/MC/ServerPlayer.hpp>
+#include <llapi/MC/Container.hpp>
+#include <llapi/Utils/StringHelper.h>
 #include "Setting.h"
 std::unordered_map<string, time_t> tempList;
 
@@ -71,7 +71,7 @@ time_t getTimeStamp2()
 
 
 std::mutex mtx;
-#include <ScheduleAPI.h>
+#include <llapi/ScheduleAPI.h>
 std::tuple<bool, std::vector<unsigned char>, unsigned, unsigned,string> isChange = std::make_tuple(false, std::vector<unsigned char>(), 0, 0,"");
 
 
@@ -523,7 +523,7 @@ void RegCommand()
 				break;
 			}
 			case do_hash("reload"): {
-				if (origin.getPermissionsLevel() > 0) {
+				if ((int)origin.getPermissionsLevel() > 0) {
 					vector<string> out;
 					getAllFiles(".\\plugins\\CustomMapX\\picture", out);
 					command.getInstance()->addSoftEnumValues("MapENameList", out);
@@ -573,12 +573,12 @@ void loadCfg() {
 		}
 		catch (std::exception& e) {
 			logger.error("Config File isInvalid, Err {}", e.what());
-			Sleep(1000 * 100);
+			//Sleep(1000 * 100);
 			exit(1);
 		}
 		catch (...) {
 			logger.error("Config File isInvalid");
-			Sleep(1000 * 100);
+			//Sleep(1000 * 100);
 			exit(1);
 		}
 	}
