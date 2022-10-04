@@ -1,5 +1,5 @@
 ﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
-#include <LLAPI.h>
+#include <llapi/LLAPI.h>
 #include "Version.h"
 #pragma comment(lib, "../SDK/Lib/bedrock_server_api.lib")
 #pragma comment(lib, "../SDK/Lib/bedrock_server_var.lib")
@@ -16,10 +16,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
-        LL::registerPlugin(
+        ll::registerPlugin(
             PLUGIN_NAME,
             PLUGIN_INTRODUCTION,
-            LL::Version(PLUGIN_VERSION_MAJOR, PLUGIN_VERSION_MINOR, PLUGIN_VERSION_REVISION, PLUGIN_LLVERSION_STATUS),
+            ll::Version(PLUGIN_VERSION_MAJOR, PLUGIN_VERSION_MINOR, PLUGIN_VERSION_REVISION, PLUGIN_LLVERSION_STATUS),
             std::map<std::string, std::string> {
 #ifdef PLUGIN_AUTHOR
                 { "QingYu", PLUGIN_AUTHOR },

@@ -5,16 +5,16 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Release)
 
 file(GLOB_RECURSE SRC_FILES_DIR
-        ${PROJECT_SOURCE_DIR}/SDK/Header/*.cpp
-        ${PROJECT_SOURCE_DIR}/SDK/Header/*.hpp
-        ${PROJECT_SOURCE_DIR}/SDK/Header/*.h
+        ${PROJECT_SOURCE_DIR}/SDK/include/*.cpp
+        ${PROJECT_SOURCE_DIR}/SDK/include/*.hpp
+        ${PROJECT_SOURCE_DIR}/SDK/include/*.h
         ${PROJECT_SOURCE_DIR}/Template/*.cpp
         ${PROJECT_SOURCE_DIR}/Template/*.hpp
         ${PROJECT_SOURCE_DIR}/Template/*.h
         )
 
-include_directories(SDK/Header)
-include_directories(SDK/Header/third-party)
+include_directories(SDK/include)
+include_directories(SDK/include/third-party)
 include_directories(Template)
 
 link_directories(.)
