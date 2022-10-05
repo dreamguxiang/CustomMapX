@@ -1,7 +1,4 @@
-`//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ ���ɵİ����ļ���
-// �� Resource.rc ʹ��
-//
+
 #define MAPModule                       4
 #define IDR_DLL1                        101
 
